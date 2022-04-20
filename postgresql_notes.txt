@@ -1,3 +1,0 @@
-pg_createcluster 14 main_test
-pg_ctlcluster 14 main_test start
-pg_ctlcluster 14 main_test stop

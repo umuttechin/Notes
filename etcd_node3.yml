@@ -1,0 +1,27 @@
+name: 'p3'
+
+data-dir: /data/etcd
+wal-dir: /data/etcd/wal
+
+snapshot-count: 10000
+quota-backend-bytes: 0
+
+listen-peer-urls: http://172.17.0.10:2380
+listen-client-urls: http://172.17.0.10:2379
+
+max-snapshots: 5
+max-wals: 5
+cors:
+
+initial-advertise-peer-urls: http://172.17.0.10:2380
+advertise-client-urls: http://172.17.0.10:2379
+initial-cluster: p1=http://172.17.0.8:2380,p2=http://172.17.0.9:2380,p3=http://172.17.0.10:2380
+
+initial-cluster-token: 'etcd-cluster'
+initial-cluster-state: 'new'
+
+enable-v2: true
+
+debug: false
+logger: zap
+log-outputs: ['stdout', '/data/etcd/log/etcd.log','stderr','/data/etcd/log/error.log']

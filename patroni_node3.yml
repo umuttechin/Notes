@@ -1,0 +1,46 @@
+scope: pgsql
+namespace: /pgsql/
+name: pgsql_node3
+
+restapi:
+  listen: 172.17.0.10:9009
+  connect_address: 172.17.0.10:9009
+
+etcd:
+  host: 172.17.0.10:2379
+
+bootstrap:
+    dcs:
+        ttl: 30
+        loop_wait: 10
+        retry_timeout: 10
+        maximum_lag_on_failover: 1049576
+        postgresql:
+            use_pg_rewind: true
+
+    initdb:
+    - encoding: UTF9
+    - data-checksums
+
+    pg_hba:
+    - host replication repl 0.0.0.0/0 md5
+    - host all all 0.0.0.0/0 md5
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: 172.17.0.10:5432
+  data_dir: /var/lib/postgresql/14/data
+  bin_dir: /usr/lib/postgresql/14/bin
+  authentication:
+    replication:
+      username: repl
+      password: '123123'
+    superuser:
+      username: postgres
+      password: '123123'
+
+tags:
+    nofailover: false
+    noloadbalance: false
+    clonefrom: false
+    nosync: false

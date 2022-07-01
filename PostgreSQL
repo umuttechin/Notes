@@ -1,0 +1,7 @@
+--Version check
+SELECT version();
+
+--Cluster and server version check 
+SELECT current_setting('cluster_name'), current_setting('server_version');
+
+--Arithmetic operations that include a null value always return null value

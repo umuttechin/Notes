@@ -27,3 +27,72 @@ SELECT pg_terminate_backend(__pid__);
 --PostgreSQL View Definition
 
 select view_definition from information_schema.views where table_schema = 'information_schema' and table_name = 'routines';
+
+##############################################################################
+
+--If you dont have access to pg_controldata in order to check block size
+
+SELECT current_setting('block_size');
+
+##############################################################################
+
+--Check current database name
+
+SELECT current_database();
+
+##############################################################################
+
+--By using this command, you are simply telling PostgreSQL to create a new database called forumdb2 
+--using the forumdb database as a template. Needs to be disconnected all sessions from the database 
+--that will be copied.
+
+create database a template b;
+
+##############################################################################
+
+--Listing tabley by their size
+
+select table_name, pg_relation_size(table_name)/1024/1024 as size_mb
+    from information_schema.tables
+    where table_schema not in ('information_schema', 'pg_catalog')
+    order by size_mb desc;
+
+##############################################################################
+
+--In order switch to the expanded display mode
+\x
+Expanded display is on.
+
+##############################################################################
+
+--Checking database size
+
+\l+ x
+List of databases
+-[ RECORD 1 ]-----+------------
+Name              | x
+Owner             | postgres
+Encoding          | UTF8
+Collate           | en_US.UTF-8
+Ctype             | en_US.UTF-8
+Access privileges | 
+Size              | 8369 kB
+Tablespace        | pg_default
+Description       | 
+
+
+--the SQL way
+
+select pg_database_size('x');
+-[ RECORD 1 ]----+--------
+pg_database_size | 8569711
+
+select pg_size_pretty(pg_database_size('x'));
+-[ RECORD 1 ]--+--------
+pg_size_pretty | 8369 kB
+
+
+
+
+
+

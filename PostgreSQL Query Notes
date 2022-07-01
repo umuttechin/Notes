@@ -91,6 +91,58 @@ select pg_size_pretty(pg_database_size('x'));
 -[ RECORD 1 ]--+--------
 pg_size_pretty | 8369 kB
 
+##############################################################################
+
+-- manual start of a database 
+
+pg_ctl -D $PGDATA START
+
+-- or if there is a service defined
+
+service postgresql START
+
+-- You must use -m fast if you wish to shut down as soon as possible. Normal shutdown means "wait for all users to finish before we exit".
+-- When you do a fast stop, all users have their transactions aborted and all connections are disconnected. It's not very polite to users, but it still treats the server and its data with care, which is good
+
+pg_ctl -D datadir -m fast stop
+
+--shutdown abort 
+
+pg_ctl -D datadir -m immediate stop
+
+
+-- fast restart the postgres database 
+
+pg_ctl -D datadir restart -m fast
+
+-- flush all dirty shared_buffers to disk with the following command issued by a database superuser
+
+psql -c "CHECKPOINT"
+
+-- If you don't supply a name, it will just use saved_cache
+
+psql -c "select pg_cache_save('mycache')"
+pg_ctl -D datadir -m immediate restart
+psql -c "select pg_cache_warm('mycache')"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

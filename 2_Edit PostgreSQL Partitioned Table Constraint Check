@@ -35,8 +35,8 @@ WITH RECURSIVE pg_inherit(inhrelid, inhparent) AS
      AND conrelid in
        (SELECT *
         FROM parent_tab))
-SELECT (select parent_name from parent_tab_name),
-	   conrelid::regclass,
+SELECT (select parent_name from parent_tab_name) parent_table_name,
+	   conrelid::regclass child_table_name,
        to_timestamp(cast((regexp_matches(cons_def, '(\d{10}).*(\d{10})', 'g'))[1] AS bigint))::TIMESTAMP low_bound,
        to_timestamp(cast((regexp_matches(cons_def, '(\d{10}).*(\d{10})', 'g'))[2] AS bigint))::TIMESTAMP upper_bound
 FROM constraint_tab

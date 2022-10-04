@@ -1,0 +1,12 @@
+
+        PL/pgSQL function _timescaledb_internal.policy_compression(integer,jsonb) line 61 at CALL
+2022-08-23 02:03:12.791 CEST [16309] LOG:  background worker "Compression Policy [1094]" (PID 2942583) was terminated by signal 11: Segmentation fault
+2022-08-23 02:03:12.791 CEST [16309] DETAIL:  Failed process was running: CALL _timescaledb_internal.policy_compression()
+2022-08-23 02:03:12.791 CEST [16309] LOG:  terminating any other active server processes
+2022-08-23 02:03:12.848 CEST [16309] LOG:  archiver process (PID 2597192) exited with exit code 2
+2022-08-23 02:03:12.953 CEST [2942757] FATAL:  the database system is in recovery mode
+2022-08-23 02:03:13.030 CEST [2942756] FATAL:  the database system is in recovery mode
+2022-08-23 02:03:13.076 CEST [2942758] FATAL:  the database system is in recovery mode
+2022-08-23 02:03:13.325 CEST [2942760] FATAL:  the database system is in recovery mode
+2022-08-23 02:03:13.577 CEST [2942762] FATAL:  the database system is in recovery mode
+2022-08-23 02:03:14.132 CEST [2942764] LOG:  PID 2625319 in cancel request did not match any process

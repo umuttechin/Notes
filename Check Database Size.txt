@@ -1,0 +1,26 @@
+--Checking database size
+
+\l+ x
+List of databases
+-[ RECORD 1 ]-----+------------
+Name              | x
+Owner             | postgres
+Encoding          | UTF8
+Collate           | en_US.UTF-8
+Ctype             | en_US.UTF-8
+Access privileges | 
+Size              | 8369 kB
+Tablespace        | pg_default
+Description       | 
+
+
+--the SQL way
+
+select pg_database_size('x');
+-[ RECORD 1 ]----+--------
+pg_database_size | 8569711
+
+select pg_size_pretty(pg_database_size('x'));
+-[ RECORD 1 ]--+--------
+pg_size_pretty | 8369 kB
+

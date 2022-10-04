@@ -1,0 +1,69 @@
+mkdir -p -m 770 /var/log/pgbackrest
+chown postgres:postgres /var/log/pgbackrest
+mkdir -p /etc/pgbackrest
+mkdir -p /etc/pgbackrest/conf.d
+touch /etc/pgbackrest/pgbackrest.conf
+chmod 640 /etc/pgbackrest/pgbackrest.conf
+chown postgres:postgres /etc/pgbackrest/pgbackrest.conf
+
+[global]
+repo1-path=/var/lib/pgbackrest
+#repo1-retention-full=2
+#repo1-cipher-pass=...
+#repo1-cipher-type=aes-256-cbc
+
+#[main]
+#pg1-path=/var/lib/postgresql/13/main
+[demo]
+pg1-path=/var/lib/postgresql/14/data
+
+
+export PGBACKREST_LOG_PATH=/var/log/pgbackrest && pgbackrest --log-level-console=error help backup log-path
+pgBackRest 2.38 - 'backup' command - 'log-path' option help
+
+Path where log files are stored.
+
+The log path provides a location for pgBackRest to store log files. Note that
+if log-level-file=off then no log path is required.
+
+current: /var/log/pgbackrest
+default: /var/log/pgbackrest
+
+
+
+
+pg-primary ? Create the pgBackRest repository
+mkdir -p /var/lib/pgbackrest
+chmod 750 /var/lib/pgbackrest
+chown postgres:postgres /var/lib/pgbackrest
+
+
+
+
+
+
+[data]
+pg1-path=/var/lib/postgresql/14/data
+
+[global]
+repo1-path=/var/lib/pgbackrest
+
+archive_command = 'pgbackrest --stanza=data archive-push %p'
+archive_mode = on
+max_wal_senders = 3
+wal_level = replica
+
+
+
+
+
+
+
+
+
+
+pgbackrest --stanza=data --log-level-console=info stanza-create
+pgbackrest --stanza=data --log-level-console=info check
+pgbackrest --stanza=data --log-level-console=info backup
+pgbackrest --stanza=data --type=diff --log-level-console=info backup
+pgbackrest --stanza=data --type=full --log-level-console=info backup

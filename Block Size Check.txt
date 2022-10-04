@@ -1,0 +1,3 @@
+--If you dont have access to pg_controldata in order to check block size
+
+SELECT current_setting('block_size');

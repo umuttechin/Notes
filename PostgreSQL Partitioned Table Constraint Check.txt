@@ -1,0 +1,43 @@
+-- For all columns and constraint human readable definition	
+
+	WITH RECURSIVE pg_inherit(inhrelid, inhparent) AS
+    (select inhrelid, inhparent
+    FROM pg_inherits
+    UNION
+    SELECT child.inhrelid, parent.inhparent
+    FROM pg_inherit child, pg_inherits parent
+    WHERE child.inhparent = parent.inhrelid), parent_tab as (
+	select inhrelid from pg_inherit
+	where inhparent = (SELECT 'public.history'::regclass::oid))
+	select c.*, pg_get_constraintdef(oid) from pg_constraint c where conrelid in (select * from parent_tab);
+
+--Tables with a check condition especially as partitioned tables and their limits as timestamp.
+
+WITH RECURSIVE pg_inherit(inhrelid, inhparent) AS
+  (SELECT inhrelid,
+          inhparent
+   FROM pg_inherits
+   UNION SELECT child.inhrelid,
+                parent.inhparent
+   FROM pg_inherit child,
+        pg_inherits parent
+   WHERE child.inhparent = parent.inhrelid), parent_tab_name as (SELECT  'public.history' as parent_name),
+               parent_tab AS
+  (SELECT inhrelid
+   FROM pg_inherit
+   WHERE inhparent =
+       (SELECT parent_name::regclass::oid from parent_tab_name)),
+               constraint_tab AS
+  (SELECT conrelid,
+          pg_get_constraintdef(oid) AS cons_def
+   FROM pg_constraint
+   WHERE contype = 'c'
+     AND conrelid in
+       (SELECT *
+        FROM parent_tab))
+SELECT (select parent_name from parent_tab_name) parent_table_name,
+	   conrelid::regclass child_table_name,
+       to_timestamp(cast((regexp_matches(cons_def, '(\d{10}).*(\d{10})', 'g'))[1] AS bigint))::TIMESTAMP low_bound,
+       to_timestamp(cast((regexp_matches(cons_def, '(\d{10}).*(\d{10})', 'g'))[2] AS bigint))::TIMESTAMP upper_bound
+FROM constraint_tab
+order by upper_bound desc;

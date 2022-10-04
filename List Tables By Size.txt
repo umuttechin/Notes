@@ -1,0 +1,7 @@
+--Listing tables by their size
+
+select table_name, pg_relation_size(table_name)/1024/1024 as size_mb
+    from information_schema.tables
+    where table_schema not in ('information_schema', 'pg_catalog')
+    order by size_mb desc;
+	

@@ -1,0 +1,119 @@
+####Step 1. Do clean shutdown of Primary[5432] (-m fast or smart)
+
+[postgres@localhost:/~]$ /opt/PostgreSQL/9.3/bin/pg_ctl -D /opt/PostgreSQL/9.3/data stop -mf
+waiting for server to shut down.... done
+server stopped
+
+####Step 2. Check for sync status and recovery status of Standby[5433] before promoting it:
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$  psql -p 5433 -c 'select pg_last_xlog_receive_location() "receive_location",
+pg_last_xlog_replay_location() "replay_location",
+pg_is_in_recovery() "recovery_status";'
+ receive_location | replay_location | recovery_status
+------------------+-----------------+-----------------
+ 2/9F000A20       | 2/9F000A20      | t
+(1 row)
+
+Standby in complete sync. At this stage we are safe to promote it as Primary.
+####Step 3. Open the Standby as new Primary by pg_ctl promote or creating a trigger file.
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ grep trigger_file data_slave/recovery.conf
+trigger_file = '/tmp/primary_down.txt'
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ touch /tmp/primary_down.txt
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ psql -p 5433 -c "select pg_is_in_recovery();"
+ pg_is_in_recovery
+-------------------
+ f
+(1 row)
+
+In Logs:  
+2014-12-29 00:16:04 PST-26344-- [host=] LOG:  trigger file found: /tmp/primary_down.txt
+2014-12-29 00:16:04 PST-26344-- [host=] LOG:  redo done at 2/A0000028
+2014-12-29 00:16:04 PST-26344-- [host=] LOG:  selected new timeline ID: 14
+2014-12-29 00:16:04 PST-26344-- [host=] LOG:  restored log file "0000000D.history" from archive
+2014-12-29 00:16:04 PST-26344-- [host=] LOG:  archive recovery complete
+2014-12-29 00:16:04 PST-26342-- [host=] LOG:  database system is ready to accept connections
+2014-12-29 00:16:04 PST-31874-- [host=] LOG:  autovacuum launcher started
+
+Standby has been promoted as master and a new timeline followed which you can notice in logs.
+####Step 4. Restart old Primary as standby and allow to follow the new timeline by passing "recovery_target_timline='latest'" in $PGDATA/recovery.conf file.
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ cat data/recovery.conf
+recovery_target_timeline = 'latest'
+standby_mode = on
+primary_conninfo = 'host=localhost port=5433 user=postgres'
+restore_command = 'cp /opt/PostgreSQL/9.3/archives93/%f %p'
+trigger_file = '/tmp/primary_131_down.txt'
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ /opt/PostgreSQL/9.3/bin/pg_ctl -D /opt/PostgreSQL/9.3/data start
+server starting
+
+If you go through recovery.conf its very clear that old Primary trying to connect to 5433 port as new Standby pointing to common WAL Archives location and started.
+
+In Logs:
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  database system was shut down at 2014-12-29 00:12:23 PST
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  restored log file "0000000E.history" from archive
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  entering standby mode
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  restored log file "0000000D00000002000000A0" from archive
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  restored log file "0000000D.history" from archive
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  consistent recovery state reached at 2/A0000090
+2014-12-29 00:21:17 PST-32315-- [host=] LOG:  record with zero length at 2/A0000090
+2014-12-29 00:21:17 PST-32310-- [host=] LOG:  database system is ready to accept read only connections
+2014-12-29 00:21:17 PST-32325-- [host=] LOG:  started streaming WAL from primary at 2/A0000000 on timeline 14
+
+####Step 5. Verify the new Standby status.
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ psql -p 5432 -c "select pg_is_in_recovery();"
+ pg_is_in_recovery
+-------------------
+ t
+(1 row)
+
+Cool, without any re-setup we have brought back old Primary as new S30.05.2022 14:58tandby.
+
+Switchback steps:
+
+####Step 1. Do clean shutdown of new Primary [5433]:
+
+[postgres@localhost:/opt/~]$ /opt/PostgreSQL/9.3/bin/pg_ctl -D /opt/PostgreSQL/9.3/data_slave stop -mf
+waiting for server to shut down.... done
+server stopped
+
+####Step 2. Check for sync status of new Standby [5432] before promoting.
+####Step 3. Open the new Standby [5432] as Primary by creating trigger file or pg_ctl promote.
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ touch /tmp/primary_131_down.txt
+
+####Step 4. Restart stopped new Primary [5433] as new Standby.
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ more data_slave/recovery.conf
+recovery_target_timeline = 'latest'
+standby_mode = on
+primary_conninfo = 'host=localhost port=5432 user=postgres'
+restore_command = 'cp /opt/PostgreSQL/9.3/archives93/%f %p'
+trigger_file = '/tmp/primary_down.txt'
+
+[postgres@localhost:/opt/PostgreSQL/9.3~]$ /opt/PostgreSQL/9.3/bin/pg_ctl -D /opt/PostgreSQL/9.3/data_slave start
+server starting
+
+You can verify the logs of new Standby.
+
+In logs:
+[postgres@localhost:/opt/PostgreSQL/9.3/data_slave/pg_log~]$ more postgresql-2014-12-29_003655.log
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  database system was shut down at 2014-12-29 00:34:01 PST
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  restored log file "0000000F.history" from archive
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  entering standby mode
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  restored log file "0000000F.history" from archive
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  restored log file "0000000E00000002000000A1" from archive
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  restored log file "0000000E.history" from archive
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  consistent recovery state reached at 2/A1000090
+2014-12-29 00:36:55 PST-919-- [host=] LOG:  record with zero length at 2/A1000090
+2014-12-29 00:36:55 PST-914-- [host=] LOG:  database system is ready to accept read only connections
+2014-12-29 00:36:55 PST-929-- [host=] LOG:  started streaming WAL from primary at 2/A1000000 on timeline 15
+2014-12-29 00:36:56 PST-919-- [host=] LOG:  redo starts at 2/A1000090
+
+Very nice, without much time we have switched the duties of Primary and Standby servers. You can even notice the increment of the timeline IDs from logs for each promotion.
+
+Like others all my posts are part of knowledge sharing, any comments or corrections are most welcome. :)
+
+Switchover steps:  http://raghavt.blogspot.de/2014/12/implementing-switchoverswitchback-in.html

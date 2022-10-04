@@ -1,0 +1,105 @@
+--Parallel index creation
+
+--https://www.cybertec-postgresql.com/en/postgresql-parallel-create-index-for-better-performance/
+
+
+CREATE TABLE t_demo (data numeric);
+ 
+CREATE OR REPLACE PROCEDURE insert_data(buckets integer)
+LANGUAGE plpgsql
+AS $$
+   DECLARE
+      i int;
+   BEGIN
+      i := 0;
+      WHILE i < buckets
+      LOOP
+         INSERT INTO t_demo SELECT random()
+            FROM generate_series(1, 1000000);
+         i := i + 1;
+         RAISE NOTICE 'inserted % buckets', i;
+         COMMIT;
+      END LOOP;
+      RETURN;
+   END;
+$$;
+ 
+CALL insert_data(500);
+
+
+test=# \d+
+ List of relations
+ Schema | Name   | Type  | Owner | Size  | Description
+--------+--------+-------+-------+-------+-------------
+ public | t_demo | table | hs    | 21 GB |
+(1 row)
+
+
+test=# SHOW max_parallel_maintenance_workers;
+ max_parallel_maintenance_workers
+----------------------------------
+ 2
+(1 row)
+
+
+test=# SET max_parallel_maintenance_workers TO 0;
+SET
+
+test=# CREATE INDEX idx1 ON t_demo (data);
+CREATE INDEX
+Time: 1031650.658 ms (17:11.651)
+
+test=# SET max_parallel_maintenance_workers TO 2;
+SET
+ 
+test=# CREATE INDEX idx2 ON t_demo (data);
+CREATE INDEX
+Time: 660672.867 ms (11:00.673)
+
+test=# ALTER TABLE t_demo SET (parallel_workers = 4);
+ALTER TABLE
+ 
+test=# SET max_parallel_maintenance_workers TO 4;
+SET
+
+test=# CREATE INDEX idx3 ON t_demo (data);
+CREATE INDEX
+Time: 534775.040 ms (08:54.775)
+
+
+
+test=# SET maintenance_work_mem TO '4 GB';
+SET
+
+
+test=# CREATE INDEX idx4 ON t_demo (data);
+CREATE INDEX
+Time: 448498.535 ms (07:28.499)
+
+
+checkpoint_timeout = 120min
+max_wal_size = 50GB
+min_wal_size = 80MB
+
+
+test=# SELECT pg_reload_conf();
+ pg_reload_conf
+----------------
+ t
+(1 row)
+
+
+test=# CREATE TABLESPACE indexspace LOCATION '/ssd1/tabspace1';
+CREATE TABLESPACE
+ 
+test=# CREATE TABLESPACE sortspace LOCATION '/ssd2/tabspace2';
+CREATE TABLESPACE
+
+
+test=# SET temp_tablespaces TO sortspace;
+SET
+
+
+test=# CREATE INDEX idx6 ON t_demo (data) TABLESPACE indexspace;
+CREATE INDEX
+Time: 408508.976 ms (06:48.509)

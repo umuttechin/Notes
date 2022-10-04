@@ -1,0 +1,3 @@
+--Check current database name
+
+SELECT current_database();

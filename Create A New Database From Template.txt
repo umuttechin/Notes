@@ -1,0 +1,5 @@
+--By using this command, you are simply telling PostgreSQL to create a new database called forumdb2 
+--using the forumdb database as a template. Needs to be disconnected all sessions from the database 
+--that will be copied.
+
+create database a template b;

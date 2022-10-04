@@ -1,0 +1,3 @@
+--In order switch to the expanded display mode
+\x
+Expanded display is on.

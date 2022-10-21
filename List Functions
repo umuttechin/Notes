@@ -1,0 +1,4 @@
+-- List Functions and their definitions.
+
+select pronamespace::regnamespace, proname, pg_get_functiondef(oid) from pg_proc where pronamespace  in (select oid from pg_namespace where nspname not in ('pg_toast', 'pg_catalog', 'information_
+schema'));

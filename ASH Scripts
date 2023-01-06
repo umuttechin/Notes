@@ -1,0 +1,224 @@
+-- Average active session number for queried time.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /samples, 2) AS aas
+FROM     ash
+GROUP BY samples;
+
+-- Average active session number for queried time historically.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT * AS aas
+FROM   ash;
+
+-- Average active session number by wait_event_type.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /samples, 2) AS aas,
+         wait_event_type
+FROM     ash
+WHERE    wait_event_type = 'CPU'
+GROUP BY samples,
+         wait_event_type
+ORDER BY 1 DESC;
+
+-- Percentage of aas and average active session number by wait_event_type.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /Sum(Count(*))OVER(),2)*100 AS percentage,
+         Round(Count(*)                     /samples, 2)                AS aas,
+         application_name
+FROM     ash
+GROUP BY application_name,
+         samples
+ORDER BY 1 DESC;
+
+-- Percentage of aas and average active session number by datname and client_addr.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /Sum(Count(*))OVER(),2)*100 AS percentage,
+         Round(Count(*)                     /samples, 2)                AS aas,
+         datname,
+         client_addr
+FROM     ash
+GROUP BY datname,
+         client_addr,
+         samples
+ORDER BY 1 DESC;
+
+-- Percentage of aas and average active session number by datname and wait_event_type.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /Sum(Count(*))OVER(),2)*100 AS percentage,
+         Round(Count(*)                     /samples, 2)                AS aas,
+         datname,
+         wait_event_type
+FROM     ash
+GROUP BY datname,
+         wait_event_type,
+         samples
+ORDER BY 1 DESC;
+
+
+-- Percentage of aas and average active session number by datname, wait_event_type and wait_event.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /Sum(Count(*))OVER(),2)*100 AS percentage,
+         Round(Count(*)                     /samples, 2)                AS aas,
+         datname,
+         wait_event_type,
+         wait_event
+FROM     ash
+GROUP BY datname,
+         wait_event_type,
+         wait_event,
+         samples
+ORDER BY 1 DESC;
+
+-- Percentage of aas and average active session number by backend_type, queryid and query.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT          Round(Count(*)              /Sum(Count(*))OVER(),2)*100 AS percentage,
+                Round(Count(*)              /samples, 2)                AS aas,
+                backend_type,
+                queryid,
+                pg.query
+FROM            ash
+LEFT OUTER JOIN pg_stat_staments pg
+using          (queryid)
+WHERE           wait_event = 'CPU'
+GROUP BY        backend_type,
+                queryid,
+                pg.query,
+                samples
+ORDER BY        1 DESC;
+
+-- Percentage of aas and average active session number by backend_type, queryid, query and wait_event_type.
+
+WITH ash AS
+(
+       SELECT *,
+              Ceil(Extract(epoch FROM Max(ash_time)OVER() - Min(ash_time)OVER()))::numeric samples
+       FROM   pg_hist_active_session_history
+       WHERE  ash_time >= CURRENT_TIMESTAMP - interval '200 minutes')
+SELECT   Round(Count(*)                     /Sum(Count(*))OVER(),2)*100 AS percentage,
+         Round(Count(*)                     /samples, 2)                AS aas,
+         backend_type,
+         queryid,
+         wait_event_type
+FROM     ash
+WHERE    wait_event_type = 'IO'
+GROUP BY backend_type,
+         queryid,
+         ,
+         samples
+ORDER BY 1 DESC;
+
+-- Blocker(s) list recursively.
+
+WITH recursive search_wait_chain(ash_time, pid, blockerpid, wait_event_type, wait_event, level, path) AS
+(
+       SELECT ash_time,
+              pid,
+              blockerpid,
+              wait_event_type,
+              wait_event,
+              1 AS level,
+              'pid: '
+                     ||pid
+                     ||'('
+                     ||wait_event_type
+                     ||')-> pid:'
+                     ||blockerpid AS path
+       FROM   pg_active_session_history
+       WHERE  blockers > 0
+	   and ash_time > current_timestamp - interval '10 minutes'
+       UNION ALL
+       SELECT p.ash_time,
+              p.pid,
+              p.blockerpid,
+              p.wait_event_type,
+              p.wait_event,
+              swc.level + 1 AS level,
+              'pid: '
+                     ||p.pid
+                     ||'('
+                     ||p.wait_event_type
+                     ||':'
+                     ||p.wait_event
+                     ||')->'
+                     ||swc.path AS path
+       FROM   pg_active_session_history p,
+              search_wait_chain swc
+       WHERE  p.blockerpid = swc.pid
+	   and p.ash_time > current_timestamp - interval '10 minutes'
+       AND    p.ash_time = swc.ash_time
+       AND    p.blockers > 0 )
+SELECT   round(count(*)/cnt)*100
+                  ||'%' AS "of total wait",
+         count(*)       AS seconds,
+         path           AS wait_chain
+FROM     (
+                SELECT pid,
+                       wait_event,
+                       path,
+                       sum(count)OVER() AS cnt
+                FROM   (
+                                SELECT   ash_time,
+                                         level,
+                                         pid,
+                                         wait_event,
+                                         path,
+                                         count(*)                                   AS count,
+                                         max(level)OVER(partition BY ash_time, pid) AS max_level
+                                FROM     search_wait_chain
+                                WHERE    level > 0
+                                GROUP BY ash_time,
+                                         level,
+                                         pid,
+                                         wait_event,
+                                         path) AS all_wait_chain
+                WHERE  level = max_level) AS wait_chain
+GROUP BY path,
+         cnt
+ORDER BY count(*) DESC;

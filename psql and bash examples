@@ -1,0 +1,28 @@
+-- Dropping all tables in a specific schema and in specified databases. 
+
+databases=(x y z)
+for i in "${databases[@]}"
+do
+ echo -e "The tables will be deleted in database $i\n" >> /tmp/dropped_tables.txt
+ psql -d $i -c "select schemaname, tablename from pg_tables where tableowner = 'a'" >> /tmp/dropped_tables.txt
+ psql -d $i -f /tmp/dropping.sql >> /tmp/dropped_tables.log
+done
+
+-- Content of /tmp/dropping.sql:
+
+do
+$$
+declare
+temprow record;
+begin
+FOR temprow IN
+        select tablename from pg_tables where tableowner = 'a'
+    LOOP
+begin
+        execute 'drop table vbbrawo.'||temprow.tablename;
+    EXCEPTION
+     WHEN others THEN CONTINUE;
+end;
+    END LOOP;
+end;
+$$;

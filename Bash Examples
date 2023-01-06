@@ -1,0 +1,19 @@
+-- find and list by alphabetically only for 7 day ago
+
+find ./ -name "*.arc" -mtime 7 -exec ls -l {} \;| tr -s " "|cut -d " " -f 6,7,8,9| sort -d
+
+-- find, zip and delete zipped files only for 7 day ago
+
+find ./ -name "*.arc" -mtime 7 -print | zip -m test.zip test_+.zip
+
+-- find and delete files only for 7 day ago
+
+find . -type f -name "*.txt" -mtime 7 -exec rm -f {} \;
+
+-- find and delete files that modified up to 7 day ago
+
+find . -type f -name "*.txt" -mtime -7 -exec rm -f {} \;
+
+-- find and delete files that modified older 7 day ago
+
+find . -type f -name "*.txt" -mtime +7 -exec rm -f {} \;

@@ -17,3 +17,10 @@ find . -type f -name "*.txt" -mtime -7 -exec rm -f {} \;
 -- find and delete files that modified older 7 day ago
 
 find . -type f -name "*.txt" -mtime +7 -exec rm -f {} \;
+
+time find . -type f -name "*.txt" -exec rm {} \;
+0.35s user 0.11s system 99% cpu 0.467 total
+--https://shapeshed.com/unix-xargs/
+time find ./foo -type f -name "*.txt" | xargs rm
+0.00s user 0.01s system 75% cpu 0.016 total
+Clearly using xargs is far more efficient. In fact several benchmarks suggest using xargs over exec {} is six times more efficient.

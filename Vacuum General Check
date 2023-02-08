@@ -1,0 +1,56 @@
+select count(*) from pg_stat_activity where backend_type = 'autovacuum worker';
+select query from pg_stat_activity where backend_type = 'autovacuum worker';
+
+
+
+
+show autovacuum_max_workers ;
+
+You can, for example, connect to the DB in psql -AtX, and in it run:
+select now(), count(*) from pg_stat_activity where backend_type = ‘autovacuum worker' \watch 300. Every 5 minutes you will get new line, looking like:
+If you run at your autovacuum_max_workers usually or most of the time, then clearly autovacuum doesn't do its work enough (or it just barely is able to keep up).
+
+select name, setting, unit from pg_settings where name  ~ 'autovacuum|vacuum.*cost' order by 1;
+
+autovacuum_vacuum_cost_delay
+autovacuum_vacuum_cost_limit
+vacuum_cost_delay
+vacuum_cost_limit
+
+The ones with names starting with vacuum are related to vacuum ran manually, the ones starting with autovacuum are for autovacuum.
+But we need to look at both of them, because if the autovacuum*cost* parameter is set to -1 then it inherits value from it's vacuum_cost* counterpart.
+
+When autovacuum works, it works on pages. Each page is 8192 bytes (8kB), unless for some reason you have compiled your Pg with nonstandard page sizes. You can always verify it with show block_size query.
+
+Whenever it deals with page that was in shared_buffers, and wasn't dirty (didn't contain any unsaved information) – it added, to cost counter, value of vacuum_cost_page_hit. Which is 1. If the page is not in shared_buffers, then it adds vacuum_cost_page_miss (10) to cost counter. And if the page is in shared_buffers, but is dirty, it adds vacuum_cost_page_dirty (20) to the counter.
+
+And, whenever counter will reach cost_limit (200 in my case) it will pause processing for cost_delay miliseconds.
+
+So, assuming there were no writes, and all of pages are in shared_buffers, with the settings above, every 200 pages (200 * 8kB = 1.6MB) autovacuum will pause processing for 10ms.
+
+On the other hand. If there have been many writes, and all shared_buffers are dirty, the pause will happen after only 10 pages (limit (200) / vacuum_cost_page_dirty(20) = 10). That means that the 10ms pause will happen after 80kB worth of vacuuming.
+
+This means that I can make autovacuum faster (more aggressive) in two ways:
+
+decrease autovacuum_vacuum_cost_delay to make the sleeps shorter
+increase autovacuum_vacuum_cost_limit to make the sleeps happen less frequently
+Analogically if you'd like to make autovacuum slower (to incur lower IO cost), you can:
+
+increase autovacuum_vacuum_cost_delay to make the sleeps longer
+decrease autovacuum_vacuum_cost_limit to make the sleeps happen more frequently
+On most of the system, these days, with SSDs everywhere, I tend to use:
+
+autovacuum_max_workers = 10
+autovacuum_vacuum_cost_delay = 2
+autovacuum_vacuum_cost_limit = 500
+This gives me 2ms pause every 500 units in cost, which is from 25 to 500 pages, depending on their state (hit/miss/dirty). Which means that the sleep happens every 200kB..4MB worth of data “handled".
+
+The takeaway from here is:
+
+make sure you don't run autovac at max workers all the time
+if you do, either give it more workers, or make it more aggresive
+if you think that autovac is causing performance problems – make it slower, less aggresive
+
+alter table a set ( autovacuum_vacuum_cost_delay = 1, autovacuum_vacuum_cost_limit = 1000 );
+
+alter system set autovacuum_vacuum_cost_delay = 5;

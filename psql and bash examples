@@ -19,7 +19,7 @@ FOR temprow IN
         select tablename from pg_tables where tableowner = 'a'
     LOOP
 begin
-        execute 'drop table vbbrawo.'||temprow.tablename;
+        execute 'drop table a.'||temprow.tablename;
     EXCEPTION
      WHEN others THEN CONTINUE;
 end;

@@ -1,0 +1,5 @@
+-- check user has create or usage privilege on a schema for specified user.
+select schema_name, has_schema_privilege('investment_accounts', schema_name, 'usage') from information_schema.schemata order by 1;
+
+-- check user has create or usage privilege on a schema for current user.
+select schema_name, has_schema_privilege(schema_name, 'usage') from information_schema.schemata order by 1;

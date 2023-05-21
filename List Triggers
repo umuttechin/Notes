@@ -1,4 +1,4 @@
 -- List Triggers, their definitions and the tables that they are bound to.
 
-select event_object_schema, event_object_table, trigger_schema, trigger_name, pg_get_triggerdef(oid) from information_schema.triggers it join pg_trigger t
-on it.trigger_name = t.tgname;
+SELECT  event_object_schema, event_object_table, trigger_schema, TRIGGER_NAME, pg_get_triggerdef(OID)from information_schema.triggers it join pg_trigger t on it.trigger_name = t.tgnameAND cast(t.tgrelid::REGCLASS AS varchar) = it.event_object_table;
+

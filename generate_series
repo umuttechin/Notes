@@ -1,0 +1,7 @@
+insert into measurement
+select random()*100, x.i, random()*30,
+random()*1000 from
+generate_series(1,2), generate_series
+( '2006-02-01'::timestamp 
+        , '2007-11-30'::timestamp
+        , '1 day'::interval) x(i);

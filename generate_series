@@ -1,3 +1,5 @@
+select x.* from generate_series(1,2), generate_series(1,5) x(i);
+
 insert into measurement
 select random()*100, x.i, random()*30,
 random()*1000 from

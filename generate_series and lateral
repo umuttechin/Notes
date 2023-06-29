@@ -7,3 +7,10 @@ generate_series(1,2), generate_series
 ( '2006-02-01'::timestamp 
         , '2007-11-30'::timestamp
         , '1 day'::interval) x(i);
+
+select random()*100, x.i, random()*30,
+random()*1000 from
+generate_series
+( '2006-02-01'::timestamp 
+        , '2006-02-05'::timestamp
+        , '1 day'::interval) x(i), lateral(select * from generate_series(1,2)) as xy;

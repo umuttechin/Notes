@@ -62,8 +62,45 @@ dw: deletes the word(if you are in the middle of the word deletes rest of the wo
 de: deletes the word(if you are in the middle of the word deletes rest of the wordthere will be space because it delete until the end of the current word, not until to the beginning of the next word).
 diw:deletes the word even if you are in the middle of the word.
 d2w: deletes 2 words.
+5d5w: 5 times deletes 5 words.
 
 db: deletes the previous word(if you are in the middle of the word deletes previous part of the word).
 
 cw: deletes the word(if you are in the middle of the word deletes rest of the word).
 ciw: deletes the word even if you are in the middle of the word and goes into the insert mode.
+yiw: yank this word.
+ci": change inner part of the "(double qoute).
+yi": yank inner part of the "(double qoute).
+
+5yy: yank 5 lines.
+%: switch between the brackets(only works if there is a matching brackets pair).
+d%: deletes everything between the brackets, including the matching brackets(only works if there is a matching brackets pair).
+
+t*: jump before the * character. " can be combined with yanking and numbers.
+f*: jump the * character. " can be combined with yanking and numbers.
+
+shift + t*: jump before the * character.
+shift + f*: jump the * character.
+
+dt*: deletes until before the * character.
+df*: deletes until the * character(including the character itself).
+
+d shift + t*: deletes backward until before the * character.
+d shift + f*: deletes backward until the * character(including the character itself).
+
+gg: beginning of the file.
+shift + g: end of the line.
+123 shift + g: jump to line 123.
+:123 also jumps to line 123.
+
+
+
+
+
+
+
+
+
+
+
+

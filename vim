@@ -47,13 +47,19 @@ b: jump beginning of the previous word.
 e: jump end of the next word.
 ge: jump end of the previous word.
 
-shift + a: end of the line and goes into the insert mode.
-shift + i: beginning of the line and goes into the insert mode.
-  
+shift + a: jump end of the line and goes into the insert mode.
+shift + i: jump beginning of the line and goes into the insert mode.
+
+0: jump beginning of the line.
+$: jump end of the line.
+d0: deletes rest of the line.
+d$: deletes previous of the line.
+
 shift + w: jump forward by word(if the word has a special character like '-').
 shift + b: jump backward by word(if the word has a special character like '-').
 
-dw: deletes the word(if you are in the middle of the word deletes rest of the word).
+dw: deletes the word(if you are in the middle of the word deletes rest of the word, there will be no space).
+de: deletes the word(if you are in the middle of the word deletes rest of the wordthere will be space because it delete until the end of the current word, not until to the beginning of the next word).
 diw:deletes the word even if you are in the middle of the word.
 d2w: deletes 2 words.
 

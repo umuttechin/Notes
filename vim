@@ -24,6 +24,8 @@ i: insert mode where you are.
 a: insert mode after the character where you are.
 o: insert mode on the new line.
 v: visual mode.
+shift + v: visual line mode(copies whole line).
+ctrl + v: visual mode(process by blocks, kinda similar to notepad++' s mode).
 
 shift + i: insert mode at the beginning of the line where you are.
 shift + a: insert mode at the end of the line.
@@ -91,16 +93,37 @@ d shift + f*: deletes backward until the * character(including the character its
 gg: beginning of the file.
 shift + g: end of the line.
 123 shift + g: jump to line 123.
-:123 also jumps to line 123.
+:123 -> also jumps to line 123.
 
+>>: indentation right(as much as specified with shiftwidth, words can be selected by using visual mode).
+<<: indentation left(as much as specified with shiftwidth, words can be selected by using visual mode).
 
+==: to indent(make indentation better) the line automatically. you can select multiple line using visual mode.
 
+/url: search forward for the word 'url'. 'n' for the seach next match and 'shift + n' previous match.
+?url: search backward for the word 'url'. 'n' for the seach next match and 'shift + n' previous match.
 
+*: search forward for the word that your cursor is on.
+#: search backward for the word that your cursor is on.
 
+ma: set a waypoint to get that location(lne actually) afterwards using following command. multiple waypoint can be created at the same time.
+'a: to get you waypoint that you set.
 
+zz: makes the current line centered on the screen even though there is no line when you are at the end of the file.
 
+:%s/pattern1/pattern2/g -> replaces pattern1 with pattern2.
+:s/pattern1/pattern2/g -> replaces pattern1 with pattern2 in the selection that is done by using visual mode.
 
+.: repeats the last command.
 
+deleting in vim is cutting.
 
+:reg -> list registry content.
+"5p: paste the content of entry 5 in the registry.
+"7yy: to put current line to the specific register in the registry.
+"7dd: to put current line to the specific register in the registry, but the register number in the registry is (n + 1), because for deletion another register, register "1 is being used. so, for this case 8 is used.
 
+"0p: paste the last yanked line even though if you deleted something after yanking.
 
+qa: record macro to the register a(we can use different naming). 
+@a: use macro that recorded in the register a.

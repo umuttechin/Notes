@@ -127,3 +127,5 @@ deleting in vim is cutting.
 
 qa: record macro to the register a(we can use different naming). 
 @a: use macro that recorded in the register a.
+
+To run macro for multiple lines, switch to visual block mode and then ':' to be able to write command. Afterwards type 'normal @a', 'a' is macro name is here.

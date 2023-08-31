@@ -1,0 +1,5 @@
+SELECT r.rolname, d.datname, rs.setconfig
+FROM   pg_db_role_setting rs
+LEFT   JOIN pg_roles      r ON r.oid = rs.setrole
+LEFT   JOIN pg_database   d ON d.oid = rs.setdatabase
+WHERE  r.rolname = 'myrole' OR d.datname = 'mydb';

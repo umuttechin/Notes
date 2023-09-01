@@ -54,8 +54,8 @@ shift + i: jump beginning of the line and goes into the insert mode.
 
 0: jump beginning of the line.
 $: jump end of the line.
-d0: deletes rest of the line.
-d$: deletes previous part of the line.
+d$ or shift + d: deletes rest of the line to the end of the line.
+d0: deletes previous part of the line to the beginning of the line.
 
 shift + w: jump forward by word(if the word has a special character like '-').
 shift + b: jump backward by word(if the word has a special character like '-').

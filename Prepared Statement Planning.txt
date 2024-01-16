@@ -1,0 +1,14 @@
+--The first five optimizations of parameterized prepared statements always rely on
+--the actual parameter values; the planner calculates the average cost of custom
+--plans based on these values. Starting from the sixth execution, if the generic plan
+--turns out to be more efficient than custom plans on average (taking into account
+--that custom plans have to be built anew every time),1
+--the planner keeps the generic
+--plan and continues using it, skipping the optimization stage.
+
+--However,v. if the planner makes a mistake, you can override the automatic decision
+--auto and select either the generic or a custom plan by setting the plan_cache_mode parameter accordingly:
+-- => SET plan_cache_mode = 'force_custom_plan';
+
+--Among other things, the pg_prepared_statements viewv. shows statistics on chosen plans:
+-- => SELECT name, generic_plans, custom_plans FROM pg_prepared_statements;

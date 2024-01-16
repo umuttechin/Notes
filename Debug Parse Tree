@@ -1,0 +1,2 @@
+--If you enable the debug_print_parse parameter, you can view the full parse tree in
+--the server log, but it has little practical sense.

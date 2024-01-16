@@ -2,8 +2,7 @@
 --the actual parameter values; the planner calculates the average cost of custom
 --plans based on these values. Starting from the sixth execution, if the generic plan
 --turns out to be more efficient than custom plans on average (taking into account
---that custom plans have to be built anew every time),1
---the planner keeps the generic
+--that custom plans have to be built anew every time), the planner keeps the generic
 --plan and continues using it, skipping the optimization stage.
 
 --However,v. if the planner makes a mistake, you can override the automatic decision

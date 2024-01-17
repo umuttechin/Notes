@@ -1,0 +1,415 @@
+Basic Statistics:
+
+pg_class
+
+• number of tuples in a relation (reltuples)
+• relation size, in pages (relpages)
+• number of pages tagged in the visibility map (relallvisible)
+
+
+SELECT reltuples, relpages, relallvisible
+FROM pg_class WHERE relname = 'flights';
+ reltuples | relpages | relallvisible
+-----------+----------+---------------
+     33121 |      392 |           392
+(1 row)
+
+demo=# EXPLAIN SELECT * FROM flights;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Seq Scan on flights  (cost=0.00..723.21 rows=33121 width=63)
+(1 row)
+
+##################################################################################
+The value reltuples = −1v. is used to differentiate between a table that has not been
+analyzed yet and a really empty table without any rows.
+It is highly likely that some rows will get inserted into the table right after its creation. So being unaware of the current state of things, the planner assumes that
+the table contains 10 pages:
+
+EXPLAIN SELECT * FROM flights_copy;
+                           QUERY PLAN
+-----------------------------------------------------------------
+ Seq Scan on flights_copy  (cost=0.00..14.10 rows=410 width=170)
+
+The number of rows is estimated based on the size of a single row, which is shown in
+the plan as width. Row width is typically an average value calculated during analysis, but since no statistics have been collected yet, here it is just an approximation
+based on the column data types.
+
+demo=# INSERT INTO flights_copy SELECT * FROM flights;
+INSERT 0 33121
+demo=# analyze flights_copy ;
+ANALYZE
+demo=# SELECT reltuples, relpages, relallvisible
+demo-# FROM pg_class WHERE relname = 'flights_copy';
+ reltuples | relpages | relallvisible
+-----------+----------+---------------
+     33121 |      392 |             0
+(1 row)
+
+demo=# VACUUM flights_copy;
+
+
+The relallvisible value is used to estimate the cost of an index-only scan. This value
+is updated by vacuum:
+
+SELECT relallvisible FROM pg_class WHERE relname = 'flights_copy';
+ relallvisible
+---------------
+           392
+(1 row)
+
+##################################################################################
+INSERT INTO flights_copy SELECT * FROM flights;
+INSERT 0 33121
+demo=# SELECT count(*) FROM flights_copy;
+ count
+-------
+ 66242
+(1 row)
+
+demo=# EXPLAIN SELECT * FROM flights_copy;
+                             QUERY PLAN
+--------------------------------------------------------------------
+ Seq Scan on flights_copy  (cost=0.00..1446.42 rows=66242 width=63)
+(1 row)
+
+
+Despite the outdated pg_class data, the estimation turns out to be accurate:
+
+demo=#
+demo=# SELECT reltuples, relpages
+demo-# FROM pg_class WHERE relname = 'flights_copy';
+ reltuples | relpages
+-----------+----------
+     33121 |      392
+(1 row)
+
+The thing is that if the planner sees a gap between relpages and the actual file size,
+it can scale the reltuples value to improve estimation accuracy.1 Since the file size
+has doubled as compared to relpages, the planner adjusts the estimated number of
+rows, assuming that data density remains the same:
+
+SELECT reltuples *
+demo-# (pg_relation_size('flights_copy') / 8192) / relpages AS tuples
+demo-# FROM pg_class WHERE relname = 'flights_copy';
+ tuples
+--------
+  66242
+##################################################################################
+
+Checking the NULL values:
+
+demo=# EXPLAIN SELECT * FROM flights WHERE actual_departure IS NULL;
+                          QUERY PLAN
+--------------------------------------------------------------
+ Seq Scan on flights  (cost=0.00..723.21 rows=16360 width=63)
+   Filter: (actual_departure IS NULL)
+(2 rows)
+
+demo=# SELECT round(reltuples * s.null_frac) AS rows
+demo-# FROM pg_class
+demo-# JOIN pg_stats s ON s.tablename = relname
+demo-# WHERE s.tablename = 'flights'
+demo-# AND s.attname = 'actual_departure';
+ rows
+-------
+ 16360
+(1 row)
+
+demo=# SELECT count(*) FROM flights WHERE actual_departure IS NULL;
+ count
+-------
+ 16348
+(1 row)
+
+##################################################################################
+
+The n_distinct field of the pg_stats view shows the number of distinct values in a
+column.
+
+if n_distinct > 0 then estimated # distinct  values
+if n_distinct < -1 then it is fraction of that table
+if n_distinct = -1 then all rows are unique
+
+demo=# SELECT round(reltuples / s.n_distinct) AS rows
+demo-# FROM pg_class
+demo-# JOIN pg_stats s ON s.tablename = relname
+demo-# WHERE s.tablename = 'flights'
+demo-# AND s.attname = 'departure_airport';
+ rows
+------
+  318
+(1 row)
+
+If the estimated number of distinct values is incorrect (because a limited number
+of rows have been analyzed), it can be overridden at the column level:
+
+ALTER TABLE ...
+ALTER COLUMN ...
+SET (n_distinct = ...);
+
+If all data always had uniform distribution, this information (coupled with minimal
+and maximal values) would be sufficient. However, for non-uniform distribution
+(which is much more common in practice), such estimation is inaccurate:
+
+##################################################################################
+demo=# SELECT most_common_vals AS mcv,
+demo-# left(most_common_freqs::text,60) || '...' AS mcf
+demo-# FROM pg_stats
+demo-# WHERE tablename = 'flights' AND attname = 'aircraft_code' ;
+                mcv                |                               mcf
+-----------------------------------+-----------------------------------------------------------------
+ {CN1,CR2,SU9,321,733,319,763,773} | {0.27926666,0.27293333,0.2571,0.0592,0.038533334,0.037466668...
+(1 row)
+
+demo=# EXPLAIN SELECT * FROM flights WHERE aircraft_code = '733';
+                         QUERY PLAN
+-------------------------------------------------------------
+ Seq Scan on flights  (cost=0.00..806.01 rows=1276 width=63)
+   Filter: (aircraft_code = '733'::bpchar)
+(2 rows)
+
+demo=# SELECT round(reltuples * s.most_common_freqs[
+demo(# array_position((s.most_common_vals::text::text[]),'733')
+demo(# ])
+demo-# FROM pg_class
+demo-# JOIN pg_stats s ON s.tablename = relname
+demo-# WHERE s.tablename = 'flights'
+demo-# AND s.attname = 'aircraft_code';
+ round
+-------
+  1276
+(1 row)
+
+demo=# SELECT count(*) FROM flights WHERE aircraft_code = '733';
+ count
+-------
+  1274
+(1 row)
+
+MCV statistics work best when distinct values are not too many. The maximum size
+of arrays is defined by the default_statistics_target parameter, which also limits the 100
+number of rows to be randomly sampled for the purpose of analysis.
+In some cases, it makes sense to increase the default parameter value, thus expanding the MCV list and improving the accuracy of estimations. You can do it at
+the column level:
+ALTER TABLE ...
+ALTER COLUMN ...
+SET STATISTICS ...;
+
+Since the MCV array stores actual values, it may take quite a lot of space. To keep
+the pg_statistic size under control and avoid loading the planner with useless work,
+values that are larger than 1 kB are excluded from analysis and statistics. But since
+such large values are likely to be unique, they would probably not make it into
+most_common_vals anyway
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

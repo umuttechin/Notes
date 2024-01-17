@@ -1,0 +1,59 @@
+If the physical order of tuples on disk has a perfect correlation with the logical order
+of TIDs in the index, each page will be accessed only once: the Index Scan node will
+sequentially go from one page to another, reading the tuples one by one.
+
+demo=# SELECT attname, correlation
+demo-# FROM pg_stats WHERE tablename = 'bookings'
+demo-# ORDER BY abs(correlation) DESC;
+   attname    | correlation
+--------------+--------------
+ book_ref     |            1
+ total_amount |  0.008018803
+ book_date    | 0.0013553719
+(3 rows)
+
+The correlation is high if the corresponding absolute value is close to one (like
+in the case of book_ref); values that are close to zero are a sign of chaotic data
+distribution.
+In this particular case, high correlation in the book_ref column is of course due to the fact
+that the data has been loaded into the table in ascending order based on this column,
+and there have been no updates yet. We would see the same picture if we executed the
+CLUSTER command for the index created on this column.
+
+
+If the correlation is low, index scanning becomes much less attractive for queries with low selectivity.
+
+
+A bitmap scan implies that a bitmap is always built sequentially, by a single leader
+process; for this reason, the name of the Bitmap Index Scan node does not contain
+the word Parallel. When the bitmap is ready, the Parallel Bitmap Heap Scan node
+starts a parallel heap scan. Workers access subsequent heap pages and process
+them concurrently.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

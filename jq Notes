@@ -1,0 +1,75 @@
+#See the difference between examples:
+
+Example 1:
+
+.SecretList | [map(.) | .[] | {x: .Name, "y": "asd"}]
+
+{
+    "SecretList": [
+        {
+            "ARN": "secret_1",
+            "Name": "secret_name_1",
+            "LastChangedDate": "2024-05-27T15:05:39.724000+02:00",
+            "LastAccessedDate": "2024-05-28T02:00:00+02:00",
+            "Tags": [
+                {
+                    "Key": "org/team",
+                    "Value": "tag_value_1"
+                }
+            ],
+            "SecretVersionsToStages": {
+                "stage_id_1": [
+                    "AWSCURRENT"
+                ]
+            },
+            "CreatedDate": "2024-05-27T15:05:39.650000+02:00"
+        },
+        {
+            "ARN": "secret_2",
+            "Name": "secret_name_2",
+            "LastChangedDate": "2024-05-27T15:11:09.424000+02:00",
+            "LastAccessedDate": "2024-05-28T02:00:00+02:00",
+            "Tags": [
+                {
+                    "Key": "org/team",
+                    "Value": "tag_value_2'"
+                }
+            ],
+            "SecretVersionsToStages": {
+                "stage_id_2": [
+                    "AWSCURRENT"
+                ]
+            },
+            "CreatedDate": "2024-05-27T15:11:09.388000+02:00"
+        }
+    ]
+}
+
+####################################################################################################################################
+
+Example 2:
+
+.query.pages | [.[] | map(.) | .[] | {page_title: .title, page_description: .extract}]
+
+{
+  "query": {
+    "pages": [
+      {
+        "21721040": {
+          "pageid": 21721040,
+          "ns": 0,
+          "title": "Stack Overflow",
+          "extract": "Some interesting text about Stack Overflow"
+        }
+      },
+      {
+        "21721041": {
+          "pageid": 21721041,
+          "ns": 0,
+          "title": "Baeldung",
+          "extract": "A great place to learn about Java"
+        }
+      }
+    ]
+  }
+}

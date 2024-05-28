@@ -3,6 +3,7 @@
 Example 1:
 
 .SecretList | [map(.) | .[] | {x: .Name, "y": "asd"}]
+.SecretList.[] as $i | $i.Name
 
 {
     "SecretList": [

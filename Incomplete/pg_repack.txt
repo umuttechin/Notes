@@ -1,0 +1,2 @@
+export PGOPTIONS='-c statement_timeout=0 -c idle_in_transaction_session_timeout=0 -c maintenance_work_mem=2GB'
+time  pg_repack --elevel info -t test -e  --no-order -h 127.0.0.1 -p 5432 -U postgres -d postgres -k > /tmp/test_repack.log
